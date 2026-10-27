@@ -1,92 +1,149 @@
+
+"""Manage a simple tournament scoreboard and publish league results."""
+
 import os
-import random
+import secrets
+import subprocess
 import tempfile
 
-POINTS = {"win" : 3, "draw": 1, "loss": 0}
-REFEREE_PASSWORD = "referee-demo"
+POINTS = {"win": 3, "draw": 1, "loss": 0}
+
 teams = {}
 matches = []
 
 
-def addTeam(teamName, players=[]):
-    teams[teamName] = {"played": 0, "won": 0, "drawn": 0, "lost": 0,
-                       "gf": 0, "ga": 0, "players": players}
+def add_team(team_name, players=None):
+    """Add a team to the scoreboard."""
+    if players is None:
+        players = []
+
+    teams[team_name] = {
+        "played": 0,
+        "won": 0,
+        "drawn": 0,
+        "lost": 0,
+        "gf": 0,
+        "ga": 0,
+        "players": players,
+    }
 
 
-def matchResult(homeGoals, awayGoals):
-    if homeGoals > awayGoals:
+def match_result(home_goals, away_goals):
+    """Return the result from the home team's perspective."""
+    if home_goals > away_goals:
         return "home"
-    elif homeGoals < awayGoals:
+    if home_goals < away_goals:
         return "away"
-    else:
-        return "draw"
+    return "draw"
 
 
-def recordMatch(home, away, homeGoals, awayGoals):
-    result = matchResult(homeGoals, awayGoals)
-    sides = ((home, homeGoals, awayGoals), (away, awayGoals, homeGoals))
+def record_match(home, away, home_goals, away_goals):
+    """Record a match and update both teams' statistics."""
+    result = match_result(home_goals, away_goals)
+    sides = (
+        (home, home_goals, away_goals),
+        (away, away_goals, home_goals),
+    )
+
     for team, scored, conceded in sides:
         teams[team]["played"] += 1
         teams[team]["gf"] += scored
         teams[team]["ga"] += conceded
+
     if result == "draw":
         teams[home]["drawn"] += 1
         teams[away]["drawn"] += 1
     else:
-        winner, loser = (home, away) if result == "home" else (away, home)
+        winner, loser = (
+            (home, away) if result == "home" else (away, home)
+        )
         teams[winner]["won"] += 1
         teams[loser]["lost"] += 1
-    matches.append((home, away, homeGoals, awayGoals))
+
+    matches.append((home, away, home_goals, away_goals))
 
 
-def points(teamName):
-    stats = teams[teamName]
-    return stats["won"] * POINTS["win"] + stats["drawn"] * POINTS["draw"]
+def points(team_name):
+    """Calculate a team's total league points."""
+    stats = teams[team_name]
+    return (
+        stats["won"] * POINTS["win"]
+        + stats["drawn"] * POINTS["draw"]
+    )
 
 
-def goalDifference(teamName):
-    return teams[teamName]["gf"] - teams[teamName]["ga"]
+def goal_difference(team_name):
+    """Calculate a team's goal difference."""
+    stats = teams[team_name]
+    return stats["gf"] - stats["ga"]
 
 
-def leagueTable():
-    return sorted(teams, key=lambda t: (points(t), goalDifference(t)),
-                  reverse=True)
+def league_table():
+    """Return teams sorted by points and goal difference."""
+    return sorted(
+        teams,
+        key=lambda team: (points(team), goal_difference(team)),
+        reverse=True,
+    )
 
 
-def isTopTwo(teamName):
-    table = leagueTable()
-    return teamName == table[0] or teamName == table[1]
-
-def tossCoin():
-    return random.choice(["Heads", "Tails"])
+def is_top_two(team_name):
+    """Check whether a team ranks in the top two."""
+    return team_name in league_table()[:2]
 
 
-def tableFilePath():
-    # Helper kept for the lab: not called by the demo
-    return tempfile.mktemp(suffix=".json")
+def toss_coin():
+    """Simulate a coin toss."""
+    return secrets.choice(["Heads", "Tails"])
 
 
-def publishTable(server):
-    # Helper kept for the lab: not called by the demo
-    os.system("scp table.json " + server + ":/var/www/")
+def table_file_path():
+    """Create a secure temporary JSON file and return its path."""
+    file_descriptor, file_path = tempfile.mkstemp(suffix=".json")
+    os.close(file_descriptor)
+    return file_path
+
+
+def publish_table(server):
+    """Copy the scoreboard to a remote server using SCP."""
+    if not server or server.startswith("-"):
+        raise ValueError("A valid server hostname is required.")
+
+    subprocess.run(
+        ["scp", "table.json", f"{server}:/var/www/"],
+        check=True,
+    )
 
 
 def main():
+    """Run the example tournament and print its scoreboard."""
     for name in ["Royal Strikers", "City Rovers", "Lake United"]:
-        addTeam(name)
-    addTeam("Hill Warriors")
-    print("Toss:", tossCoin())
-    recordMatch("Royal Strikers", "City Rovers", 2,1)
-    recordMatch("Lake United", "Hill Warriors", 0, 0)
-    recordMatch("City Rovers", "Lake United", 3, 2)
-    recordMatch("Hill Warriors", "Royal Strikers", 1, 1)
+        add_team(name)
+    add_team("Hill Warriors")
+
+    print("Toss:", toss_coin())
+
+    record_match("Royal Strikers", "City Rovers", 2, 1)
+    record_match("Lake United", "Hill Warriors", 0, 0)
+    record_match("City Rovers", "Lake United", 3, 2)
+    record_match("Hill Warriors", "Royal Strikers", 1, 1)
+
     print("Pos Team Played Won Drawn Lost Pts")
-    for pos, name in enumerate(leagueTable(), 1):
+    for position, name in enumerate(league_table(), 1):
         stats = teams[name]
-        print(pos, name, stats["played"], stats["won"], stats["drawn"],
-              stats["lost"], points(name)) # one row per team
-    print("Is City Rovers in the top two?", isTopTwo("City Rovers"))
+        print(
+            position,
+            name,
+            stats["played"],
+            stats["won"],
+            stats["drawn"],
+            stats["lost"],
+            points(name),
+        )
+
+    print("Is City Rovers in the top two?", is_top_two("City Rovers"))
     print("Matches played:", len(matches))
 
 
-main()
+if __name__ == "__main__":
+    main()

@@ -1,55 +1,86 @@
 # Lab 5: Static Code Analysis — Sports Tournament Scoreboard
 
-**Your file:** `tournament_scoreboard.py`
+**Source file:** `tournament_scoreboard.py`
 
-Follow the lab handout for the full instructions.
+## About the Project
 
-## About the program
+This Python program manages a sports tournament scoreboard. It registers teams, records match results, calculates points and goal differences, ranks teams, checks the top two positions, and simulates a coin toss.
 
-A league scoreboard. It registers teams, records match results, keeps played/won/drawn/lost and goal stats, builds a points table sorted by points and goal difference, and does a coin toss.
+The lab demonstrates how static analysis tools can identify code-quality and security issues and how those issues can be addressed.
 
-The code works, but only just. It has quality, style and security problems of the kind Pylint, Flake8 and Bandit are built to find.
+## Setup and Execution
 
-## What to do
+Install the required tools:
 
-1. **Run it first** and read the output carefully:
+```bash
+python -m pip install pylint bandit flake8
+```
 
-   ```
-   python tournament_scoreboard.py
-   ```
+Run the scoreboard:
 
-   It runs a short demonstration and needs no input. Note what it prints, so you can check that it still behaves the same after your fixes.
+```bash
+python tournament_scoreboard.py
+```
 
-2. **Install the tools:**
+The demonstration creates four teams, records four matches, prints the league table, checks whether City Rovers is in the top two, and displays the number of matches played.
 
-   ```
-   python -m pip install pylint bandit flake8
-   ```
+## Static Analysis
 
-3. **Run the analysis and save the reports:**
+The project was analyzed using:
 
-   ```
-   python -m pylint tournament_scoreboard.py > pylint_report.txt
-   python -m bandit -r tournament_scoreboard.py > bandit_report.txt
-   python -m flake8 tournament_scoreboard.py > flake8_report.txt
-   ```
+- **Pylint** — code quality, naming, documentation, and maintainability.
+- **Bandit** — potentially insecure Python operations.
+- **Flake8** — style and formatting violations.
 
-4. **Document the issues** in `issues.md` using this table (at least 4 rows, high and medium severity first):
+### Before and After Results
 
-   | Issue | Type | Line(s) | Description | Fix Approach |
-   |-------|------|---------|-------------|--------------|
-   | ...   | ...  | ...     | ...         | ...          |
+| Tool | Before | After |
+|---|---|---|
+| Pylint | 4.75/10 | 10.00/10 |
+| Bandit | 4 findings, including 1 high-severity finding | 3 low-severity findings |
+| Flake8 | 4 reported violations | 0 reported violations |
 
-5. **Fix the code.** Fix at least 4 of the issues you documented, then rerun all three tools to confirm they are gone. Repeat until you are satisfied. The program should still do its job when you are done.
+### Fixes Applied
 
-6. **Reflect.** Answer the four reflection questions from the handout in `reflection.md`.
+1. Added module and function docstrings.
+2. Changed function and argument names to `snake_case`.
+3. Replaced the mutable default argument with `None`.
+4. Simplified match-result logic and the top-two check.
+5. Removed the unused hardcoded referee password.
+6. Replaced `random.choice()` with `secrets.choice()`.
+7. Replaced `tempfile.mktemp()` with `tempfile.mkstemp()`.
+8. Replaced `os.system()` with `subprocess.run()` using an argument list.
+9. Corrected whitespace and formatting issues.
 
-## Deliverables
+### Remaining Security Findings
 
-- `tournament_scoreboard.py`: your cleaned version, with at least 4 issues fixed.
-- `issues.md`: the completed issue table.
-- `reflection.md`: your answers to the reflection questions.
+Bandit reports three low-severity findings related to subprocess usage:
 
-**Target:** aim for a Pylint score above 9.5 on your final file. A perfect 10.00/10 is very good.
+- **B404:** Subprocess module import.
+- **B607:** Partial executable path used for SCP.
+- **B603:** Subprocess execution requires security review.
 
-Be ready to explain the bugs you found and how you fixed them. You may be called on to present.
+The publishing helper avoids shell execution, but its executable path and external command execution still warrant review. Publishing to an actual remote server has not been tested.
+
+## Reports and Documentation
+
+### Original analysis reports
+
+- `pylint_before.txt`
+- `bandit_before.txt`
+- `flake8_before.txt`
+
+### Final analysis reports
+
+- `pylint_after.txt`
+- `bandit_after.txt`
+- `flake8_after.txt`
+
+### Additional deliverables
+
+- `issues.md` — documented issues, their types, and fixes.
+- `reflection.md` — lessons learned from static analysis.
+
+## Conclusion
+
+The updated scoreboard retains its demonstration functionality while improving code readability, consistency, and security practices. The results show that static analysis can help identify issues early, but tool output should be combined with functional testing and manual security review.
